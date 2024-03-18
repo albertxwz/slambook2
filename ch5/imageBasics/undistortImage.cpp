@@ -3,7 +3,7 @@
 
 using namespace std;
 
-string image_file = "./distorted.png";   // 请确保路径正确
+string image_file = "ch5/imageBasics/distorted.png";   // 请确保路径正确
 
 int main(int argc, char **argv) {
 
@@ -38,8 +38,9 @@ int main(int argc, char **argv) {
   }
 
   // 画图去畸变后图像
-  cv::imshow("distorted", image);
-  cv::imshow("undistorted", image_undistort);
-  cv::waitKey();
+  // cv::imshow("distorted", image);
+  // cv::imshow("undistorted", image_undistort);
+  // cv::waitKey();
+  cv::imwrite("ch5/imageBasics/undistorted.png", image_undistort);
   return 0;
 }

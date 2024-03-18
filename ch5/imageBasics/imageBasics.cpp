@@ -6,6 +6,10 @@ using namespace std;
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
 
+void writeimg(string filename, cv::Mat &image) {
+  cv::imwrite(string("ch5/imageBasics/") + filename, image);
+}
+
 int main(int argc, char **argv) {
   // 读取argv[1]指定的图像
   cv::Mat image;
@@ -19,8 +23,8 @@ int main(int argc, char **argv) {
 
   // 文件顺利读取, 首先输出一些基本信息
   cout << "图像宽为" << image.cols << ",高为" << image.rows << ",通道数为" << image.channels() << endl;
-  cv::imshow("image", image);      // 用cv::imshow显示图像
-  cv::waitKey(0);                  // 暂停程序,等待一个按键输入
+  // cv::imshow("image", image);      // 用cv::imshow显示图像
+  // cv::waitKey(0);                  // 暂停程序,等待一个按键输入
 
   // 判断image的类型
   if (image.type() != CV_8UC1 && image.type() != CV_8UC3) {
@@ -53,17 +57,19 @@ int main(int argc, char **argv) {
   cv::Mat image_another = image;
   // 修改 image_another 会导致 image 发生变化
   image_another(cv::Rect(0, 0, 100, 100)).setTo(0); // 将左上角100*100的块置零
-  cv::imshow("image", image);
-  cv::waitKey(0);
+  writeimg("ubuntu_assign.png", image);
+  // cv::imshow("image", image);
+  // cv::waitKey(0);
 
   // 使用clone函数来拷贝数据
   cv::Mat image_clone = image.clone();
   image_clone(cv::Rect(0, 0, 100, 100)).setTo(255);
-  cv::imshow("image", image);
-  cv::imshow("image_clone", image_clone);
-  cv::waitKey(0);
+  writeimg("ubuntu_afterclone.png", image);
+  // cv::imshow("image", image);
+  // cv::imshow("image_clone", image_clone);
+  // cv::waitKey(0);
 
   // 对于图像还有很多基本的操作,如剪切,旋转,缩放等,限于篇幅就不一一介绍了,请参看OpenCV官方文档查询每个函数的调用方法.
-  cv::destroyAllWindows();
+  // cv::destroyAllWindows();
   return 0;
 }

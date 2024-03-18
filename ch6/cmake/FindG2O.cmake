@@ -1,5 +1,7 @@
 # Find the header files
 
+set(G2O_ROOT /home/x/xie77777/miniconda3/envs/slambook2)
+
 FIND_PATH(G2O_INCLUDE_DIRS g2o/core/base_vertex.h
   ${G2O_ROOT}/include
   $ENV{G2O_ROOT}/include
@@ -10,7 +12,7 @@ FIND_PATH(G2O_INCLUDE_DIRS g2o/core/base_vertex.h
   /sw/local/include
   /sw/include
   NO_DEFAULT_PATH
-  )
+)
 
 # Macro to unify finding both the debug and release versions of the
 # libraries; this is adapted from the OpenSceneGraph FIND_LIBRARY

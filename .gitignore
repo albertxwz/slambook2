@@ -34,3 +34,9 @@
 *cmake-build-*
 *.idea
 **build**
+
+# Local
+sbatch.sh
+stdout
+stderr
+.vscode

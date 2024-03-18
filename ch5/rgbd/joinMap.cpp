@@ -2,8 +2,11 @@
 #include <fstream>
 #include <opencv2/opencv.hpp>
 #include <boost/format.hpp>  // for formating strings
-#include <pangolin/pangolin.h>
+// #include <pangolin/pangolin.h>
 #include <sophus/se3.hpp>
+#include <pcl/point_types.h>
+#include <pcl/io/pcd_io.h>
+// #include <pcl/visualization/pcl_visualizer.h>
 
 
 using namespace std;
@@ -11,12 +14,12 @@ typedef vector<Sophus::SE3d, Eigen::aligned_allocator<Sophus::SE3d>> TrajectoryT
 typedef Eigen::Matrix<double, 6, 1> Vector6d;
 
 // 在pangolin中画图，已写好，无需调整
-void showPointCloud(
-    const vector<Vector6d, Eigen::aligned_allocator<Vector6d>> &pointcloud);
+// void showPointCloud(
+//     const vector<Vector6d, Eigen::aligned_allocator<Vector6d>> &pointcloud);
 
 int main(int argc, char **argv) {
     vector<cv::Mat> colorImgs, depthImgs;    // 彩色图和深度图
-    TrajectoryType poses;         // 相机位姿
+    vector<Eigen::Isometry3d> poses;         // 相机位姿
 
     ifstream fin("./pose.txt");
     if (!fin) {
@@ -32,9 +35,14 @@ int main(int argc, char **argv) {
         double data[7] = {0};
         for (auto &d:data)
             fin >> d;
-        Sophus::SE3d pose(Eigen::Quaterniond(data[6], data[3], data[4], data[5]),
-                          Eigen::Vector3d(data[0], data[1], data[2]));
-        poses.push_back(pose);
+        // Sophus::SE3d pose(Eigen::Quaterniond(data[6], data[3], data[4], data[5]),
+        //                   Eigen::Vector3d(data[0], data[1], data[2]));
+        // poses.push_back(pose);
+
+        Eigen::Quaterniond q(data[6], data[3], data[4], data[5]);
+        Eigen::Isometry3d T(q);
+        T.pretranslate(Eigen::Vector3d(data[0], data[1], data[2]));
+        poses.push_back(T);
     }
 
     // 计算点云并拼接
@@ -44,38 +52,74 @@ int main(int argc, char **argv) {
     double fx = 518.0;
     double fy = 519.0;
     double depthScale = 1000.0;
-    vector<Vector6d, Eigen::aligned_allocator<Vector6d>> pointcloud;
-    pointcloud.reserve(1000000);
+    // vector<Vector6d, Eigen::aligned_allocator<Vector6d>> pointcloud;
+    // pointcloud.reserve(1000000);
 
-    for (int i = 0; i < 5; i++) {
-        cout << "转换图像中: " << i + 1 << endl;
+    // for (int i = 0; i < 5; i++) {
+    //     cout << "转换图像中: " << i + 1 << endl;
+    //     cv::Mat color = colorImgs[i];
+    //     cv::Mat depth = depthImgs[i];
+    //     Sophus::SE3d T = poses[i];
+    //     for (int v = 0; v < color.rows; v++)
+    //         for (int u = 0; u < color.cols; u++) {
+    //             unsigned int d = depth.ptr<unsigned short>(v)[u]; // 深度值
+    //             if (d == 0) continue; // 为0表示没有测量到
+    //             Eigen::Vector3d point;
+    //             point[2] = double(d) / depthScale;
+    //             point[0] = (u - cx) * point[2] / fx;
+    //             point[1] = (v - cy) * point[2] / fy;
+    //             Eigen::Vector3d pointWorld = T * point;
+
+    //             Vector6d p;
+    //             p.head<3>() = pointWorld;
+    //             p[5] = color.data[v * color.step + u * color.channels()];   // blue
+    //             p[4] = color.data[v * color.step + u * color.channels() + 1]; // green
+    //             p[3] = color.data[v * color.step + u * color.channels() + 2]; // red
+    //             pointcloud.push_back(p);
+    //         }
+    // }
+
+    // cout << "点云共有" << pointcloud.size() << "个点." << endl;
+    // showPointCloud(pointcloud);
+
+    cout << "Converting the images to point cloud" << endl;
+    typedef pcl::PointXYZRGB PointT;
+    typedef pcl::PointCloud<PointT> PointCloud;
+
+    PointCloud::Ptr pointCloud(new PointCloud);
+
+    for (int i = 0; i < 5; ++i) {
+        cout << "converting: " << i+1 << endl;
         cv::Mat color = colorImgs[i];
         cv::Mat depth = depthImgs[i];
-        Sophus::SE3d T = poses[i];
-        for (int v = 0; v < color.rows; v++)
-            for (int u = 0; u < color.cols; u++) {
-                unsigned int d = depth.ptr<unsigned short>(v)[u]; // 深度值
-                if (d == 0) continue; // 为0表示没有测量到
+        Eigen::Isometry3d T = poses[i];
+        for (int v = 0; v < color.rows; ++v)
+            for (int u = 0; u < color.cols; ++u) {
+                unsigned int d = depth.ptr<unsigned short>(v)[u];
+                if (d == 0) continue;
                 Eigen::Vector3d point;
                 point[2] = double(d) / depthScale;
-                point[0] = (u - cx) * point[2] / fx;
-                point[1] = (v - cy) * point[2] / fy;
-                Eigen::Vector3d pointWorld = T * point;
+                point[0] = (u-cx) * point[2] / fx;
+                point[1] = (v-cy) * point[2] / fy;
+                Eigen::Vector3d pointWorld = T*point;
 
-                Vector6d p;
-                p.head<3>() = pointWorld;
-                p[5] = color.data[v * color.step + u * color.channels()];   // blue
-                p[4] = color.data[v * color.step + u * color.channels() + 1]; // green
-                p[3] = color.data[v * color.step + u * color.channels() + 2]; // red
-                pointcloud.push_back(p);
+                PointT p;
+                p.x = pointWorld[0];
+                p.y = pointWorld[1];
+                p.z = pointWorld[2];
+                p.b = color.data[v*color.step + u*color.channels()];
+                p.g = color.data[v*color.step + u*color.channels() + 1];
+                p.r = color.data[v*color.step + u*color.channels() + 2];
+                pointCloud->points.push_back(p);
             }
     }
-
-    cout << "点云共有" << pointcloud.size() << "个点." << endl;
-    showPointCloud(pointcloud);
+    pointCloud->is_dense = false;
+    cout << "Total points: " << pointCloud->size() << endl;
+    pcl::io::savePCDFileBinary("map.pcd", *pointCloud);
     return 0;
 }
 
+/*
 void showPointCloud(const vector<Vector6d, Eigen::aligned_allocator<Vector6d>> &pointcloud) {
 
     if (pointcloud.empty()) {
@@ -115,3 +159,4 @@ void showPointCloud(const vector<Vector6d, Eigen::aligned_allocator<Vector6d>> &
     }
     return;
 }
+*/
